@@ -1,8 +1,8 @@
-name: Deploy static site to Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, gh-pages]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -12,10 +12,10 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  test-and-deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -24,13 +24,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - name: Prepare Build
+        run: |
+          mkdir public
+          cp index.html public/
+          cp speech.html public/
+          cp main.js public/
+          cp CNAME public/
+
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: './public'
 
       - name: Deploy to GitHub Pages
         id: deployment
